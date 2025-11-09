@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Event</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const themeToggle = document.getElementById('theme-toggle');
+            const body = document.body;
+
+            // Check for saved theme preference or default to light mode
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            if (currentTheme === 'dark') {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+            } else {
+                themeToggle.textContent = '🌙';
+            }
+
+            // Toggle theme on button click
+            themeToggle.addEventListener('click', function () {
+                body.classList.toggle('dark-mode');
+                const theme = body.classList.contains('dark-mode') ? 'dark' : 'light';
+                localStorage.setItem('theme', theme);
+                themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('beranda') }}">Beranda</a></li>
+            <li><a href="{{ url_for('events') }}">Kelola Event</a></li>
+            <li><a href="{{ url_for('profil') }}">Profil</a></li>
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            <li><button class="theme-toggle" id="theme-toggle">🌙</button></li>
+            {% if session.username %}
+            <li style="color: white; font-weight: bold;">Selamat datang, {{ session.username }}</li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    <div class="container">
+        <h1>Edit Event</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST" enctype="multipart/form-data">
+            <label for="nama_event">Nama Event:</label>
+            <input type="text" id="nama_event" name="nama_event" value="{{ event.nama_event }}" required>
+
+            <label for="deskripsi">Deskripsi:</label>
+            <textarea id="deskripsi" name="deskripsi" required>{{ event.deskripsi }}</textarea>
+
+            <label for="tanggal">Tanggal dan Waktu:</label>
+            <input type="datetime-local" id="tanggal" name="tanggal"
+                value="{{ event.tanggal.strftime('%Y-%m-%dT%H:%M') }}" required>
+
+            <label for="lokasi">Lokasi:</label>
+            <input type="text" id="lokasi" name="lokasi" value="{{ event.lokasi }}" required>
+
+            <label for="gambar">Gambar (opsional):</label>
+            <input type="file" id="gambar" name="gambar" accept="image/*">
+            {% if event.gambar %}
+            <p>Gambar saat ini: <img src="{{ url_for('static', filename='uploads/' + event.gambar) }}"
+                    alt="Current Image" style="width: 100px; height: 100px; object-fit: cover;"></p>
+            {% endif %}
+
+            <button type="submit" class="btn">Update Event</button>
+        </form>
+    </div>
+
+
+</body>
+
+</html>

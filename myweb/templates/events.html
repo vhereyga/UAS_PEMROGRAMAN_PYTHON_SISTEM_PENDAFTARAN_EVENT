@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kelola Event</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const themeToggle = document.getElementById('theme-toggle');
+            const body = document.body;
+
+            // Check for saved theme preference or default to light mode
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            if (currentTheme === 'dark') {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+            } else {
+                themeToggle.textContent = '🌙';
+            }
+
+            // Toggle theme on button click
+            themeToggle.addEventListener('click', function () {
+                body.classList.toggle('dark-mode');
+                const theme = body.classList.contains('dark-mode') ? 'dark' : 'light';
+                localStorage.setItem('theme', theme);
+                themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('beranda') }}">Beranda</a></li>
+            <li><a href="{{ url_for('events') }}">Kelola Event</a></li>
+            <li><a href="{{ url_for('profil') }}">Profil</a></li>
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            <li><button class="theme-toggle" id="theme-toggle">🌙</button></li>
+            {% if session.username %}
+            <li style="color: white; font-weight: bold;">Selamat datang, {{ session.username }}</li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    <div class="container">
+        <h1>Kelola Event</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <a href="{{ url_for('add_event') }}" class="btn">Tambah Event Baru</a>
+
+        <div class="tasks-grid">
+            {% for event in events %}
+            <div class="task-card">
+                {% if event.gambar %}
+                <img src="{{ url_for('static', filename='uploads/' + event.gambar) }}" alt="{{ event.nama_event }}"
+                    style="width: 100%; height: 200px; object-fit: cover; border-radius: 10px 10px 0 0;">
+                {% endif %}
+                <div style="padding: 20px;">
+                    <h3 class="task-title">{{ event.nama_event }}</h3>
+                    <p class="task-info"><strong>Deskripsi:</strong> {{ event.deskripsi }}</p>
+                    <p class="task-info"><strong>Tanggal:</strong> {{ event.tanggal.strftime('%d-%m-%Y %H:%M') }}</p>
+                    <p class="task-info"><strong>Lokasi:</strong> {{ event.lokasi }}</p>
+                    <div class="task-actions">
+                        <a href="{{ url_for('event_detail', id=event.id) }}" class="btn">Lihat Detail</a>
+                        <a href="{{ url_for('edit_event', id=event.id) }}" class="edit-btn">Edit</a>
+                        <a href="{{ url_for('delete_event', id=event.id) }}" class="delete-btn"
+                            onclick="return confirm('Apakah Anda yakin ingin menghapus event ini?')">Hapus</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+
+</body>
+
+</html>

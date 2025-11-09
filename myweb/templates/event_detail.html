@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detail Event - {{ event.nama_event }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const themeToggle = document.getElementById('theme-toggle');
+            const body = document.body;
+
+            // Check for saved theme preference or default to light mode
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            if (currentTheme === 'dark') {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+            } else {
+                themeToggle.textContent = '🌙';
+            }
+
+            // Toggle theme on button click
+            themeToggle.addEventListener('click', function () {
+                body.classList.toggle('dark-mode');
+                const theme = body.classList.contains('dark-mode') ? 'dark' : 'light';
+                localStorage.setItem('theme', theme);
+                themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('beranda') }}">Beranda</a></li>
+            <li><a href="{{ url_for('events') }}">Kelola Event</a></li>
+            <li><a href="{{ url_for('profil') }}">Profil</a></li>
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            <li><button class="theme-toggle" id="theme-toggle">🌙</button></li>
+            {% if session.username %}
+            <li style="color: white; font-weight: bold;">Selamat datang, {{ session.username }}</li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    <div class="container">
+        <h1>{{ event.nama_event }}</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <div class="event-detail-container">
+            {% if event.gambar %}
+            <div class="event-hero">
+                <img src="{{ url_for('static', filename='uploads/' + event.gambar) }}" alt="{{ event.nama_event }}"
+                    class="event-hero-image">
+            </div>
+            {% endif %}
+
+            <div class="event-content-grid">
+                <div class="event-main-info">
+                    <div class="event-description-card">
+                        <h2>Deskripsi Event</h2>
+                        <p>{{ event.deskripsi }}</p>
+                    </div>
+
+                    <div class="event-details-card">
+                        <h2>Detail Event</h2>
+                        <div class="event-details-list">
+                            <div class="detail-item">
+                                <span class="detail-icon">📅</span>
+                                <div>
+                                    <strong>Tanggal & Waktu</strong>
+                                    <p>{{ event.tanggal.strftime('%d-%m-%Y %H:%M') }}</p>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-icon">📍</span>
+                                <div>
+                                    <strong>Lokasi</strong>
+                                    <p>{{ event.lokasi }}</p>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-icon">👥</span>
+                                <div>
+                                    <strong>Peserta Terdaftar</strong>
+                                    <p>{{ registered_users|length }} orang</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="event-sidebar">
+                    <div class="registration-card">
+                        <h3>Status Pendaftaran</h3>
+                        {% if is_registered %}
+                        <div class="registration-status registered">
+                            <span class="status-icon">✅</span>
+                            <p>Anda sudah terdaftar untuk event ini</p>
+                        </div>
+                        {% else %}
+                        <div class="registration-status not-registered">
+                            <span class="status-icon">📝</span>
+                            <p>Belum terdaftar</p>
+                        </div>
+                        <a href="{{ url_for('register_event', id=event.id) }}" class="btn success register-btn">Daftar
+                            Sekarang</a>
+                        {% endif %}
+                    </div>
+
+                    <div class="participants-card">
+                        <h3>Daftar Peserta</h3>
+                        {% if registered_users %}
+                        <div class="participants-list">
+                            {% for user in registered_users %}
+                            <div class="participant-item">
+                                <span class="participant-avatar">{{ user[0].upper() }}</span>
+                                <span class="participant-name">{{ user }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="no-participants">
+                            <p>Belum ada peserta terdaftar</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="event-actions">
+                <a href="{{ url_for('beranda') }}" class="btn">← Kembali ke Beranda</a>
+                <a href="{{ url_for('events') }}" class="btn">Lihat Semua Event</a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
