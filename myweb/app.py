@@ -193,8 +193,13 @@ def delete_event(id):
     if event.user_id != session['user_id'] and not user.is_admin:
         flash('Anda tidak memiliki izin untuk menghapus event ini.', 'error')
         return redirect(url_for('events'))
+    # Delete all registrations for this event first
+    registrations = Registration.query.filter_by(event_id=id).all()
+    for reg in registrations:
+        db.session.delete(reg)
     db.session.delete(event)
     db.session.commit()
+    flash('Event berhasil dihapus.', 'success')
     return redirect(url_for('events'))
 
 @app.route('/events/<int:id>')
