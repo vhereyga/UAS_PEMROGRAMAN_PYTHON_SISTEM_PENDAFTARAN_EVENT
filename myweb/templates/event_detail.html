@@ -4,14 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detail Event - {{ event.nama_event }}</title>
+    <title>Detail Event - {{ event.nama_event or 'Event Tidak Ditemukan' }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const themeToggle = document.getElementById('theme-toggle');
             const body = document.body;
-
-            // Check for saved theme preference or default to light mode
             const currentTheme = localStorage.getItem('theme') || 'light';
             if (currentTheme === 'dark') {
                 body.classList.add('dark-mode');
@@ -19,8 +17,6 @@
             } else {
                 themeToggle.textContent = '🌙';
             }
-
-            // Toggle theme on button click
             themeToggle.addEventListener('click', function () {
                 body.classList.toggle('dark-mode');
                 const theme = body.classList.contains('dark-mode') ? 'dark' : 'light';
@@ -46,7 +42,7 @@
     </nav>
 
     <div class="container">
-        <h1>{{ event.nama_event }}</h1>
+        <h1>{{ event.nama_event or 'Event Tidak Ditemukan' }}</h1>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -59,7 +55,12 @@
         <div class="event-detail-container">
             {% if event.gambar %}
             <div class="event-hero">
-                <img src="{{ url_for('static', filename='uploads/' + event.gambar) }}" alt="{{ event.nama_event }}"
+                <img src="{{ url_for('static', filename='uploads/' ~ event.gambar) }}" alt="{{ event.nama_event }}"
+                    class="event-hero-image">
+            </div>
+            {% else %}
+            <div class="event-hero">
+                <img src="{{ url_for('static', filename='uploads/default.jpg') }}" alt="Default Event Image"
                     class="event-hero-image">
             </div>
             {% endif %}
@@ -68,7 +69,7 @@
                 <div class="event-main-info">
                     <div class="event-description-card">
                         <h2>Deskripsi Event</h2>
-                        <p>{{ event.deskripsi }}</p>
+                        <p>{{ event.deskripsi or 'Tidak ada deskripsi untuk event ini.' }}</p>
                     </div>
 
                     <div class="event-details-card">
@@ -78,16 +79,40 @@
                                 <span class="detail-icon">📅</span>
                                 <div>
                                     <strong>Tanggal & Waktu</strong>
-                                    <p>{{ event.tanggal.strftime('%d-%m-%Y %H:%M') }}</p>
+                                    <p>
+                                        {% if event.tanggal %}
+                                        {{ event.tanggal.strftime('%d-%m-%Y %H:%M') }}
+                                        {% else %}
+                                        Belum ditentukan
+                                        {% endif %}
+                                    </p>
                                 </div>
                             </div>
+
                             <div class="detail-item">
                                 <span class="detail-icon">📍</span>
                                 <div>
                                     <strong>Lokasi</strong>
-                                    <p>{{ event.lokasi }}</p>
+                                    <p>{{ event.lokasi or 'Belum ditentukan' }}</p>
                                 </div>
                             </div>
+
+                            <div class="detail-item">
+                                <span class="detail-icon">💰</span>
+                                <div>
+                                    <strong>Harga Tiket</strong>
+                                    <p>{{ event.harga | currency }}</p>
+                                </div>
+                            </div>
+
+                            <div class="detail-item">
+                                <span class="detail-icon">🎫</span>
+                                <div>
+                                    <strong>Stok Tiket</strong>
+                                    <p>{{ event.stok or 0 }} tiket tersedia</p>
+                                </div>
+                            </div>
+
                             <div class="detail-item">
                                 <span class="detail-icon">👥</span>
                                 <div>
@@ -112,8 +137,9 @@
                             <span class="status-icon">📝</span>
                             <p>Belum terdaftar</p>
                         </div>
-                        <a href="{{ url_for('register_event', id=event.id) }}" class="btn success register-btn">Daftar
-                            Sekarang</a>
+                        <a href="{{ url_for('register_event', id=event.id) }}" class="btn success register-btn">
+                            Daftar Sekarang
+                        </a>
                         {% endif %}
                     </div>
 

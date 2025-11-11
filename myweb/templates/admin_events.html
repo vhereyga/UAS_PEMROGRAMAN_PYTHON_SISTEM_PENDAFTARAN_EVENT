@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Kelola Events</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const themeToggle = document.getElementById('theme-toggle');
+            const body = document.body;
+
+            // Check for saved theme preference or default to light mode
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            if (currentTheme === 'dark') {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+            } else {
+                themeToggle.textContent = '🌙';
+            }
+
+            // Toggle theme on button click
+            themeToggle.addEventListener('click', function () {
+                body.classList.toggle('dark-mode');
+                const theme = body.classList.contains('dark-mode') ? 'dark' : 'light';
+                localStorage.setItem('theme', theme);
+                themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('beranda') }}">Beranda</a></li>
+            <li><a href="{{ url_for('admin_users') }}">Kelola Users</a></li>
+            <li><a href="{{ url_for('admin_events') }}">Kelola Events</a></li>
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            <li><button class="theme-toggle" id="theme-toggle">🌙</button></li>
+            {% if session.username %}
+            <li style="color: white; font-weight: bold;">Admin: {{ session.username }}</li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    <div class="container">
+        <h1>Kelola Events</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <div class="admin-table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nama Event</th>
+                        <th>Tanggal</th>
+                        <th>Lokasi</th>
+                        <th>Harga</th>
+                        <th>Stok</th>
+                        <th>Pembuat</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in events %}
+                    <tr>
+                        <td>{{ event.id }}</td>
+                        <td>{{ event.nama_event }}</td>
+                        <td>{{ event.tanggal.strftime('%d-%m-%Y %H:%M') }}</td>
+                        <td>{{ event.lokasi }}</td>
+                        <td>Rp {{ "{:,.0f}".format(event.harga) }}</td>
+                        <td>{{ event.stok }}</td>
+                        <td>{{ event.user.username }}</td>
+                        <td>
+                            <a href="{{ url_for('event_detail', id=event.id) }}" class="btn small">Lihat</a>
+                            <a href="{{ url_for('edit_event', id=event.id) }}" class="btn small">Edit</a>
+                            <a href="{{ url_for('delete_event', id=event.id) }}" class="btn small danger"
+                                onclick="return confirm('Apakah Anda yakin ingin menghapus event ini?')">Hapus</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+
+</html>

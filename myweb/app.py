@@ -24,6 +24,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
 
 class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -32,6 +33,11 @@ class Event(db.Model):
     tanggal = db.Column(db.DateTime, nullable=False)
     lokasi = db.Column(db.String(100), nullable=False)
     gambar = db.Column(db.String(200), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    harga = db.Column(db.Float, nullable=False, default=0.0)
+    stok = db.Column(db.Integer, nullable=False, default=0)
+
+    user = db.relationship('User', backref=db.backref('events', lazy=True))
 
     def __repr__(self):
         return f'<Event {self.nama_event}>'
@@ -53,6 +59,14 @@ def login_required(f):
         return f(*args, **kwargs)
     wrapper.__name__ = f.__name__
     return wrapper
+
+@app.template_filter('currency')
+def currency_format(value):
+    """Format angka menjadi mata uang Rupiah"""
+    try:
+        return "Rp {:,.0f}".format(float(value))
+    except (TypeError, ValueError):
+        return "Rp 0"
 
 @app.route('/')
 @login_required
@@ -126,6 +140,8 @@ def add_event():
         deskripsi = request.form['deskripsi']
         tanggal = request.form['tanggal']
         lokasi = request.form['lokasi']
+        harga = float(request.form.get('harga', 0.0))
+        stok = int(request.form.get('stok', 0))
         gambar = None
         if 'gambar' in request.files:
             file = request.files['gambar']
@@ -134,7 +150,7 @@ def add_event():
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 gambar = filename
         from datetime import datetime
-        event_baru = Event(nama_event=nama_event, deskripsi=deskripsi, tanggal=datetime.strptime(tanggal, '%Y-%m-%dT%H:%M'), lokasi=lokasi, gambar=gambar)
+        event_baru = Event(nama_event=nama_event, deskripsi=deskripsi, tanggal=datetime.strptime(tanggal, '%Y-%m-%dT%H:%M'), lokasi=lokasi, gambar=gambar, user_id=session['user_id'], harga=harga, stok=stok)
         db.session.add(event_baru)
         db.session.commit()
         flash('Event berhasil ditambahkan.', 'success')
@@ -145,11 +161,17 @@ def add_event():
 @login_required
 def edit_event(id):
     event = Event.query.get_or_404(id)
+    user = User.query.get(session['user_id'])
+    if event.user_id != session['user_id'] and not user.is_admin:
+        flash('Anda tidak memiliki izin untuk mengedit event ini.', 'error')
+        return redirect(url_for('events'))
     if request.method == 'POST':
         event.nama_event = request.form['nama_event']
         event.deskripsi = request.form['deskripsi']
         event.tanggal = request.form['tanggal']
         event.lokasi = request.form['lokasi']
+        event.harga = float(request.form.get('harga', 0.0))
+        event.stok = int(request.form.get('stok', 0))
         if 'gambar' in request.files:
             file = request.files['gambar']
             if file and allowed_file(file.filename):
@@ -167,6 +189,10 @@ def edit_event(id):
 @login_required
 def delete_event(id):
     event = Event.query.get_or_404(id)
+    user = User.query.get(session['user_id'])
+    if event.user_id != session['user_id'] and not user.is_admin:
+        flash('Anda tidak memiliki izin untuk menghapus event ini.', 'error')
+        return redirect(url_for('events'))
     db.session.delete(event)
     db.session.commit()
     return redirect(url_for('events'))
@@ -176,7 +202,7 @@ def delete_event(id):
 def event_detail(id):
     event = Event.query.get_or_404(id)
     registrations = Registration.query.filter_by(event_id=id).all()
-    registered_users = [reg.user.username for reg in registrations]
+    registered_users = [reg.user.username for reg in registrations if reg.user]
     user_id = session['user_id']
     is_registered = Registration.query.filter_by(user_id=user_id, event_id=id).first() is not None
     return render_template('event_detail.html', event=event, registered_users=registered_users, is_registered=is_registered)
@@ -196,7 +222,74 @@ def register_event(id):
         flash('Pendaftaran event berhasil.', 'success')
     return redirect(url_for('event_detail', id=id))
 
+# Admin Routes
+@app.route('/admin/users')
+@login_required
+def admin_users():
+    user = User.query.get(session['user_id'])
+    if not user.is_admin:
+        flash('Akses ditolak.', 'error')
+        return redirect(url_for('beranda'))
+    users = User.query.all()
+    return render_template('admin_users.html', users=users)
+
+@app.route('/admin/users/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+def admin_edit_user(id):
+    user = User.query.get(session['user_id'])
+    if not user.is_admin:
+        flash('Akses ditolak.', 'error')
+        return redirect(url_for('beranda'))
+    edit_user = User.query.get_or_404(id)
+    if request.method == 'POST':
+        edit_user.username = request.form['username']
+        edit_user.is_admin = 'is_admin' in request.form
+        db.session.commit()
+        flash('User berhasil diupdate.', 'success')
+        return redirect(url_for('admin_users'))
+    return render_template('admin_edit_user.html', user=edit_user)
+
+@app.route('/admin/users/<int:id>/delete')
+@login_required
+def admin_delete_user(id):
+    user = User.query.get(session['user_id'])
+    if not user.is_admin:
+        flash('Akses ditolak.', 'error')
+        return redirect(url_for('beranda'))
+    delete_user = User.query.get_or_404(id)
+    db.session.delete(delete_user)
+    db.session.commit()
+    flash('User berhasil dihapus.', 'success')
+    return redirect(url_for('admin_users'))
+
+@app.route('/admin/events')
+@login_required
+def admin_events():
+    user = User.query.get(session['user_id'])
+    if not user.is_admin:
+        flash('Akses ditolak.', 'error')
+        return redirect(url_for('beranda'))
+    events = Event.query.all()
+    return render_template('admin_events.html', events=events)
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        # Create admin user if not exists
+        admin_user = User.query.filter_by(username='admin').first()
+        if not admin_user:
+            hashed_password = generate_password_hash('admin123')
+            admin_user = User(username='admin', password=hashed_password, is_admin=True)
+            db.session.add(admin_user)
+            db.session.commit()
+        # Update existing events to have default values for new fields
+        events = Event.query.all()
+        for event in events:
+            if event.user_id is None:
+                event.user_id = admin_user.id if admin_user else 1
+            if event.harga is None:
+                event.harga = 0.0
+            if event.stok is None:
+                event.stok = 0
+        db.session.commit()
     app.run(debug=True)
